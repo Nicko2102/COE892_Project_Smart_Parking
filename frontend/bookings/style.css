@@ -1,0 +1,8 @@
+.hoverDiv {
+    display: none;
+    position: absolute;
+}
+
+.hoverCell:hover .hoverDiv {
+    display: block;
+}
