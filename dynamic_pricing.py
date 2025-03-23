@@ -26,4 +26,3 @@ def dynamic_pricing(current_time=None):
     # Calculate final price
     final_price = base_price * price_multiplier
     return final_price
-s
