@@ -1,6 +1,6 @@
 import datetime
 
-PRICING_RULES = {
+PRICING_RULES = {  # dictionary of pricing rules
     "base_price": 10.00,
     "weekend_multiplier": 2.0,
     "peak_multiplier": 1.5,
@@ -13,31 +13,31 @@ PRICING_RULES = {
     }
 }
 
-# provide duration as parameter as well
 def dynamic_pricing(current_time: datetime.datetime = None, duration_hours: float = 1) -> float:
-    """
-    Calculate total parking price based on time of day, day of week, and duration.
-    """
-    if current_time is None:
-        current_time = datetime.datetime.now() # Use current time if not provided
+    
+    #Calculate total parking price based on time of day, day of week, and duration.
+    
+    if current_time is None or not isinstance(current_time, datetime.datetime): # default to current time , time provided has issues
+        current_time = datetime.datetime.now()
 
-    rules = PRICING_RULES # Load pricing rules and different types under it
+    if not isinstance(duration_hours, (int, float)): # checks duration type
+        raise TypeError("duration_hours must be a number")
+    if duration_hours <= 0: # checks if duration is positive
+        raise ValueError("Duration must be positive")
 
-    # Determine base multiplier (weekend vs. weekday peak/off‑peak)
-    if current_time.weekday() in rules["weekend_days"]: 
-        multiplier = rules["weekend_multiplier"] # Apply weekend multiplier
+    rules = PRICING_RULES
+
+    if current_time.weekday() in rules["weekend_days"]: # checks if its a weekend
+        multiplier = rules["weekend_multiplier"]
     else:
         multiplier = 1.0
-        for start, end in rules["peak_periods"]: # Check if current time is in peak period
+        for start, end in rules["peak_periods"]: # checks if its peak time
             if start <= current_time.hour < end:
-                multiplier = rules["peak_multiplier"] # Apply peak multiplier
+                multiplier = rules["peak_multiplier"]
                 break
 
-    total = rules["base_price"] * multiplier * duration_hours 
-
-    # Apply best discount
+    total = rules["base_price"] * multiplier * duration_hours # calculates total price based on base price, multiplier and duration
     discounts = [disc for hrs, disc in rules["discount_tiers"].items() if duration_hours >= hrs] 
-    discount = max(discounts, default=0) # 0 if no discount applies
-    return round(total * (1 - discount), 2) # Round 
+    discount = max(discounts, default=0)
 
-
+    return round(total * (1 - discount), 2) 
