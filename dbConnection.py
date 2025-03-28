@@ -18,7 +18,14 @@ from ignore.secureconnect import getconnection
 
 cnx = getconnection("cps892_smart_parking")
 cur = cnx.cursor(dictionary=True)
+curL = cnx.cursor()
 # cur2 = cnx.cursor()
+
+def getFloors():
+    cnx.commit()
+    cur.execute(f"SELECT DISTINCT(FloorId) FROM Floors ORDER BY FloorId ASC")
+    floors = [k['FloorId'] for k in cur.fetchall()]
+    return floors
 
 def getFloorInfo(floorId: int):
     cur.execute(f"SELECT * FROM Floors where FloorId = {floorId}")
@@ -30,6 +37,14 @@ def getFloorSpots(floor: int):
     spots = [[k['SpotId'], k['SpotNumber']] for k in cur.fetchall()]
     return spots
 
+def createBooking(spot: int, user: int, startTime: str, endTime: str, cost: float):
+    cur.execute(f"INSERT INTO BOOKINGS (`SpotId`, `UserId`, `StartTime`, `EndTime`, `Cost`) VALUES ({spot}, {user}, '{startTime}', '{endTime}', '{cost}')")
+    cnx.commit()
+    cur.execute(f"SELECT * FROM Bookings where SpotId = {spot} AND UserId = {user} ORDER BY BookingId DESC LIMIT 1")
+    bookingId = cur.fetchone()['BookingId']
+    print(bookingId)
+    return bookingId
+
 def getSpotAvailability(startTime: str, endTime: str, floor: int):
     print(startTime)
     spotIds = np.array(getFloorSpots(floor))[:,0]
@@ -37,16 +52,23 @@ def getSpotAvailability(startTime: str, endTime: str, floor: int):
     bookings = [[k['BookingId'], k['SpotId'], k['StartTime'], k['EndTime']] for k in cur.fetchall()]
     ret = {}
     
-    for sid, _ in getFloorSpots(floor):
+    for sid, snum in getFloorSpots(floor):
         print(type(sid))
-        ret[str(sid)] = -1
+        ret[str(sid)] = [snum, -1]
     for bk in bookings:
-        if ret[str(bk[1])] == -1:
-            ret[str(bk[1])] = [bk[0]]
+        if ret[str(bk[1])][1] == -1:
+            ret[str(bk[1])][1] = [bk[0], bk[2], bk[3]]
         else:
-            ret[str(bk[1])].append(bk[0])
+            ret[str(bk[1])].append([bk[0], bk[2], bk[3]])
 
     return ret#{0: -1, 1: -1, 2: [0], 3: -1}
+
+def getSpotIsFree(startTime: str, endTime: str, spot: int):
+    print(startTime)
+    # spotIds = np.array(getFloorSpots(floor))[:,0]
+    cur.execute(f"SELECT * FROM Bookings where SpotId = {spot} AND NOT(StartTime >= \"{endTime}\" OR EndTime <= \"{startTime}\")")
+    bookings = cur.fetchone()
+    return bookings == None
 
 def getCustomers():
     cur.execute("SELECT * FROM USERS where Role = \"Customer\"")
@@ -66,6 +88,10 @@ def activateUser(userId):
     cur.execute(f"UPDATE USERS set Status = \"Active\" where userid = {userId};")
     cnx.commit()
 
+# print(getFloors())
+
+# print(getSpotIsFree("2025-03-26 11:00:00", "2025-03-26 15:30:00", 1))
+# createBooking(0, 0, "2025-04-10 10:00:00", "2025-04-10 11:30:00", 30)
 
 # spotss = getSpotAvailability("2025-03-23 11:50:00", "2025-03-23 16:30:00", 0)
 # print(spotss)
