@@ -40,10 +40,22 @@ app.add_middleware(
 )
 
 
+class Booking(BaseModel):
+    spot: int
+    user: int
+    startTime: str
+    endTime: str
+
 class BookingWindow(BaseModel):
     start: str
     end: str
 
+
+# Get
+@app.get("/floors")
+async def get_floors():
+    floors = dbc.getFloors()
+    return floors
 
 # Get
 @app.get("/floors/{floor_id}")
@@ -64,4 +76,23 @@ async def check_available_spots_on_floor(timeSlot: BookingWindow, floor_id: int)
     spots = dbc.getSpotAvailability(timeSlot.start, timeSlot.end, floor_id)
     # print(spots)
     return spots #json.dumps(spots)
+
+@app.get("/spots/{spot_id}/available")
+async def check_available_spots_on_floor(timeSlot: BookingWindow, spot_id: int):
+    print("I", spot_id)
+    print("S", timeSlot)
+    isfree = dbc.getSpotIsFree(timeSlot.start, timeSlot.end, spot_id)
+    # print(spots)
+    return {"free": isfree} #json.dumps(spots)
+
+
+@app.post("/bookings")
+async def create_new_booking(booking: Booking):
+    if not dbc.getSpotIsFree(booking.startTime, booking.endTime, booking.spot):
+        raise HTTPException(status_code=419, detail="Booking no longer available. Please try another spot.")
+    bid = dbc.createBooking(booking.spot, booking.user, booking.startTime, booking.endTime, 30)
+    return {"bookingId": bid}
+
+
+
 
