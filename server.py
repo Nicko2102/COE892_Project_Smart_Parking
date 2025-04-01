@@ -4,11 +4,15 @@ from fastapi import FastAPI, Header, HTTPException, Body, Request, Response
 from pydantic import BaseModel
 from enum import Enum
 import dbConnection as dbc
-import json, os
+import json, os, datetime
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
+from dynamic_pricing import dynamic_pricing as getPrice
+from datetime import datetime as dt
+import threading
 
 
+locks = {}
 
 middleware = [
     Middleware(
@@ -77,14 +81,81 @@ async def check_available_spots_on_floor(timeSlot: BookingWindow, floor_id: int)
     # print(spots)
     return spots #json.dumps(spots)
 
-@app.get("/spots/{spot_id}/available")
+@app.get("/spots/{spot_id}")
+async def get_spot_info(spot_id: int):
+    spot = dbc.getSpotInfo(spot_id)
+    return spot
+    
+
+@app.put("/spots/{spot_id}/available")
 async def check_available_spots_on_floor(timeSlot: BookingWindow, spot_id: int):
     print("I", spot_id)
     print("S", timeSlot)
     isfree = dbc.getSpotIsFree(timeSlot.start, timeSlot.end, spot_id)
-    # print(spots)
-    return {"free": isfree} #json.dumps(spots)
+    if isfree:
+        start = dt.fromisoformat(timeSlot.start)
+        hours = (dt.fromisoformat(timeSlot.end) - start).total_seconds() / 3600
+        print(hours)
+        price = getPrice(start, hours)
+        return {"free": isfree, "price": price} #json.dumps(spots)
 
+    # print(spots)
+    return {"free": isfree, "price": 0} #json.dumps(spots)
+
+@app.post("/spots/{spot_id}/lock")
+async def lock_spot(timeSlot: BookingWindow, spot_id: int):
+    print("I", spot_id)
+    print("S", timeSlot)
+    realStart = dt.fromisoformat(timeSlot.start)
+    realEnd = dt.fromisoformat(timeSlot.end)
+    isLocked = False
+    if spot_id in locks:
+        for s, e, _ in locks[spot_id]:
+            if dt.fromisoformat(s) < realEnd and dt.fromisoformat(e) > realStart:
+                isLocked = True
+                break
+    
+    print("L1", locks)
+    
+    if isLocked:
+        print("ALREADY IN USE")
+        # raise HTTPException(status_code=421, detail="Another user is currently booking this spot. Please check back in 30 seconds.")
+        return {"success": False}
+    else:
+        print("VALID")
+        if spot_id in locks:
+            locks[spot_id].append([timeSlot.start, timeSlot.end, int(dt.now().timestamp())])
+        else:
+            locks[spot_id] = [[timeSlot.start, timeSlot.end, int(dt.now().timestamp())]]
+        print("L2", locks)
+        return {"success": True}
+    
+@app.delete("/spots/{spot_id}/lock")
+async def unlock_spot(timeSlot: BookingWindow, spot_id: int):
+    print("I", spot_id)
+    print("S", timeSlot)
+    # realStart = dt.fromisoformat(timeSlot.start)
+    # realEnd = dt.fromisoformat(timeSlot.end)
+    removed = False
+    print("U1", locks)
+    if spot_id in locks:
+        for i in range(len(locks[spot_id])):
+            print(i, locks[spot_id][i])
+            if locks[spot_id][i][0] == timeSlot.start and locks[spot_id][i][1] == timeSlot.end:
+                locks[spot_id].pop(i)
+                if len(locks[spot_id]) == 0:
+                    del locks[spot_id]
+                removed = True
+                break
+    
+    print("U2", locks)
+    
+    if not removed:
+        print("Spot unlock error")
+        raise HTTPException(status_code=422, detail="Lock somehow does not exist.")
+    else:
+        print("Spot UNLOCKED")
+        return {"success": True}
 
 @app.post("/bookings")
 async def create_new_booking(booking: Booking):
@@ -94,5 +165,23 @@ async def create_new_booking(booking: Booking):
     return {"bookingId": bid}
 
 
+def clearLocks():
+    empties = []
+    for key in locks:
+        for i in range(len(locks[key]) - 1, -1, -1):
+            if locks[key][i][2] + 20 < int(dt.now().timestamp()):
+                print("Lock removed:", locks[key][i])
+                locks[key].pop(i)
+                if len(locks[key]) == 0:
+                    empties.append(key)
+    
+    for k in empties:
+        del locks[k]
+    
+    clearLocksThread.run()
+
+clearLocksThread = threading.Timer(5, clearLocks)
+clearLocksThread.daemon = True
+clearLocksThread.start()
 
 

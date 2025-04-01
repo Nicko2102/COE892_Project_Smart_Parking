@@ -1,3 +1,8 @@
+.cendiv {
+    display: flex;
+    justify-content: center;
+}
+
 .hoverDiv {
     display: none;
     position: absolute;
@@ -21,6 +26,16 @@
     align-self: center;
     /* width: 100%; */
     /* height: 100%; */
+}
+
+.hoverCell {
+    max-height: 300px;
+    aspect-ratio: 0.5;
+    position: relative;
+    margin: 5px;
+    display: flex;
+    flex-grow: 1;
+    align-content: center;
 }
 
 .hoverPanel {
@@ -83,4 +98,50 @@
 .pn:hover .pnInner {
     /* background-color: blueviolet; */
     display: inline-block;
+}
+
+.bookingInfo {
+    /* align-content: center; */
+    width: auto;
+    background-color: beige;
+    padding: 20px 30px;
+    justify-content: center;
+    border: 2px solid black;
+    border-radius: 30px;
+}
+
+.blockText {
+    text-align: center;
+    margin: 10px;
+    /* width: 40%; */
+}
+
+.notiMessage {
+    display: none;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: -5px;
+    width: 250px;
+    min-height: 30px;
+    align-content: center;
+    /* padding: 2px 15px; */
+    border-radius: 10px;
+    border: 1px solid #4444ff;
+    background-color: #4444ff44;
+}
+
+.okButton {
+    background-color: #44ff77;
+    border-width: 0;
+    border-radius: 20px;
+    font-size: 30px;
+    /* padding: 10px 40px; */
+    padding: auto;
+    width: 220px;
+    height: 60px;
+}
+
+.okButton:hover {
+    background-color: #88ff99;
+    /* border-width: 2px; */
 }
