@@ -8,6 +8,7 @@ from datetime import datetime as dt
 from pytz import timezone
 from dateutil import tz
 import numpy as np
+import threading, time
 
 import mysql.connector
 import mysql.connector.cursor
@@ -44,6 +45,11 @@ def createBooking(spot: int, user: int, startTime: str, endTime: str, cost: floa
     bookingId = cur.fetchone()['BookingId']
     print(bookingId)
     return bookingId
+
+def getSpotInfo(spot: int):
+    cur.execute(f"SELECT * FROM Spots where SpotId = {spot}")
+    spot = cur.fetchone()
+    return [spot['SpotId'], spot['FloorId'], spot['SpotNumber']]
 
 def getSpotAvailability(startTime: str, endTime: str, floor: int):
     print(startTime)
@@ -87,6 +93,11 @@ def updatePassword(userId, newPass):
 def activateUser(userId):
     cur.execute(f"UPDATE USERS set Status = \"Active\" where userid = {userId};")
     cnx.commit()
+
+
+
+# clearLocksThread = threading.Thread(target=clearLocks)
+
 
 # print(getFloors())
 
